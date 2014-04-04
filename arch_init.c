@@ -50,7 +50,7 @@
 #include "exec/cpu-all.h"
 #include "hw/acpi/acpi.h"
 
-#define DEBUG_ARCH_INIT
+/* #define DEBUG_ARCH_INIT */
 
 #ifdef DEBUG_ARCH_INIT
 #define DPRINTF(fmt, ...) \

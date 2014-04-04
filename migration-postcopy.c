@@ -713,7 +713,7 @@ static int postcopy_outgoing_ram_save_background(
     }
 
     i = 0;
-    t0 = qemu_get_clock_ns(rt_clock);
+    t0 = qemu_get_clock_ms(rt_clock);
     migration_update_rate_limit_stat(ms, rlstat, t0);
     qemu_mutex_lock_ramlist();
     while (qemu_file_rate_limit(f) == 0) {
@@ -756,7 +756,7 @@ static int postcopy_outgoing_ram_save_background(
         i++;
 #define MAX_WAIT 50
         if ((i & 63) == 0) {
-            uint64_t t1 = (qemu_get_clock_ns(rt_clock) - t0) / 1000000;
+            uint64_t t1 = (qemu_get_clock_ms(rt_clock) - t0);
             if (t1 > MAX_WAIT) {
                 DPRINTF("big wait: %" PRIu64 " milliseconds, %d iterations\n",
                         t1, i);

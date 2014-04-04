@@ -23,6 +23,11 @@
 /***************************************************************************
  * stub functions for rdma-postcopy
  */
+
+#include "migration/migration.h"
+#include "migration/rdma.h"
+#include "migration/postcopy.h"
+
 void postcopy_rdma_outgoing_cleanup(RDMAPostcopyOutgoing *outgoing)
 {
 }
@@ -54,8 +59,7 @@ void postcopy_rdma_incoming_postfork_parent(RDMAPostcopyIncomingInit *arg)
 {
 }
 
-RDMAPostcopyIncoming*
-postcopy_rdma_incoming_init(UMemBlockHead *umem_blocks, bool precopy_enabled)
+RDMAPostcopyIncoming* postcopy_rdma_incoming_init(RDMAPostcopyIncomingInit *arg)
 {
     return NULL;
 }

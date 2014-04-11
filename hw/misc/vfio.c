@@ -873,7 +873,19 @@ static void vfio_disable_msi_common(VFIODevice *vdev)
 
 static void vfio_disable_msix(VFIODevice *vdev)
 {
+    int i;
+
     msix_unset_vector_notifiers(&vdev->pdev);
+
+    /*
+     * MSI-X will only release vectors if MSI-X is still enabled on the
+     * device, check through the rest and release it ourselves if necessary.
+     */
+    for (i = 0; i < vdev->nr_vectors; i++) {
+        if (vdev->msi_vectors[i].use) {
+            vfio_msix_vector_release(&vdev->pdev, i);
+        }
+    }
 
     if (vdev->nr_vectors) {
         vfio_disable_irqindex(vdev, VFIO_PCI_MSIX_IRQ_INDEX);
@@ -3141,6 +3153,13 @@ static int vfio_initfn(PCIDevice *pdev)
     /* QEMU can change multi-function devices to single function, or reverse */
     vdev->emulated_config_bits[PCI_HEADER_TYPE] =
                                               PCI_HEADER_TYPE_MULTI_FUNCTION;
+
+    /* Restore or clear multifunction, this is always controlled by QEMU */
+    if (vdev->pdev.cap_present & QEMU_PCI_CAP_MULTIFUNCTION) {
+        vdev->pdev.config[PCI_HEADER_TYPE] |= PCI_HEADER_TYPE_MULTI_FUNCTION;
+    } else {
+        vdev->pdev.config[PCI_HEADER_TYPE] &= ~PCI_HEADER_TYPE_MULTI_FUNCTION;
+    }
 
     /*
      * Clear host resource mapping info.  If we choose not to register a

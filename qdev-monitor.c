@@ -472,6 +472,12 @@ DeviceState *qdev_device_add(QemuOpts *opts)
         return NULL;
     }
 
+    if (object_class_is_abstract(obj)) {
+        qerror_report(QERR_INVALID_PARAMETER_VALUE, "driver",
+                      "non-abstract device type");
+        return NULL;
+    }
+
     k = DEVICE_CLASS(obj);
 
     /* find bus */
@@ -512,6 +518,7 @@ DeviceState *qdev_device_add(QemuOpts *opts)
     }
     if (qemu_opt_foreach(opts, set_property, qdev, 1) != 0) {
         qdev_free(qdev);
+        object_unref(OBJECT(qdev));
         return NULL;
     }
     if (qdev->id) {
@@ -525,6 +532,7 @@ DeviceState *qdev_device_add(QemuOpts *opts)
         g_free(name);
     }        
     if (qdev_init(qdev) < 0) {
+        object_unref(OBJECT(qdev));
         qerror_report(QERR_DEVICE_INIT_FAILED, driver);
         return NULL;
     }

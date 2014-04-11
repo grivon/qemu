@@ -648,13 +648,11 @@ static int coroutine_fn qcow2_co_is_allocated(BlockDriverState *bs,
     int ret;
 
     *pnum = nb_sectors;
-    /* FIXME We can get errors here, but the bdrv_co_is_allocated interface
-     * can't pass them on today */
     qemu_co_mutex_lock(&s->lock);
     ret = qcow2_get_cluster_offset(bs, sector_num << 9, pnum, &cluster_offset);
     qemu_co_mutex_unlock(&s->lock);
     if (ret < 0) {
-        *pnum = 0;
+        return ret;
     }
 
     return (cluster_offset != 0) || (ret == QCOW2_CLUSTER_ZERO);
@@ -1287,7 +1285,7 @@ static int qcow2_create2(const char *filename, int64_t total_size,
      * size for any qcow2 image.
      */
     BlockDriverState* bs;
-    QCowHeader header;
+    QCowHeader *header;
     uint8_t* refcount_table;
     int ret;
 
@@ -1302,30 +1300,34 @@ static int qcow2_create2(const char *filename, int64_t total_size,
     }
 
     /* Write the header */
-    memset(&header, 0, sizeof(header));
-    header.magic = cpu_to_be32(QCOW_MAGIC);
-    header.version = cpu_to_be32(version);
-    header.cluster_bits = cpu_to_be32(cluster_bits);
-    header.size = cpu_to_be64(0);
-    header.l1_table_offset = cpu_to_be64(0);
-    header.l1_size = cpu_to_be32(0);
-    header.refcount_table_offset = cpu_to_be64(cluster_size);
-    header.refcount_table_clusters = cpu_to_be32(1);
-    header.refcount_order = cpu_to_be32(3 + REFCOUNT_SHIFT);
-    header.header_length = cpu_to_be32(sizeof(header));
+    QEMU_BUILD_BUG_ON((1 << MIN_CLUSTER_BITS) < sizeof(*header));
+    header = g_malloc0(cluster_size);
+    *header = (QCowHeader) {
+        .magic                      = cpu_to_be32(QCOW_MAGIC),
+        .version                    = cpu_to_be32(version),
+        .cluster_bits               = cpu_to_be32(cluster_bits),
+        .size                       = cpu_to_be64(0),
+        .l1_table_offset            = cpu_to_be64(0),
+        .l1_size                    = cpu_to_be32(0),
+        .refcount_table_offset      = cpu_to_be64(cluster_size),
+        .refcount_table_clusters    = cpu_to_be32(1),
+        .refcount_order             = cpu_to_be32(3 + REFCOUNT_SHIFT),
+        .header_length              = cpu_to_be32(sizeof(*header)),
+    };
 
     if (flags & BLOCK_FLAG_ENCRYPT) {
-        header.crypt_method = cpu_to_be32(QCOW_CRYPT_AES);
+        header->crypt_method = cpu_to_be32(QCOW_CRYPT_AES);
     } else {
-        header.crypt_method = cpu_to_be32(QCOW_CRYPT_NONE);
+        header->crypt_method = cpu_to_be32(QCOW_CRYPT_NONE);
     }
 
     if (flags & BLOCK_FLAG_LAZY_REFCOUNTS) {
-        header.compatible_features |=
+        header->compatible_features |=
             cpu_to_be64(QCOW2_COMPAT_LAZY_REFCOUNTS);
     }
 
-    ret = bdrv_pwrite(bs, 0, &header, sizeof(header));
+    ret = bdrv_pwrite(bs, 0, header, cluster_size);
+    g_free(header);
     if (ret < 0) {
         goto out;
     }

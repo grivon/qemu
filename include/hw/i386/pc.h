@@ -106,7 +106,16 @@ PcGuestInfo *pc_guest_info_init(ram_addr_t below_4g_mem_size,
 #define PCI_HOST_PROP_PCI_HOLE64_START "pci-hole64-start"
 #define PCI_HOST_PROP_PCI_HOLE64_END   "pci-hole64-end"
 #define PCI_HOST_PROP_PCI_HOLE64_SIZE  "pci-hole64-size"
-#define DEFAULT_PCI_HOLE64_SIZE (1ULL << 31)
+#define DEFAULT_PCI_HOLE64_SIZE (~0x0ULL)
+
+static inline uint64_t pci_host_get_hole64_size(uint64_t pci_hole64_size)
+{
+    if (pci_hole64_size == DEFAULT_PCI_HOLE64_SIZE) {
+        return 1ULL << 62;
+    } else {
+        return pci_hole64_size;
+    }
+}
 
 void pc_init_pci64_hole(PcPciInfo *pci_info, uint64_t pci_hole64_start,
                         uint64_t pci_hole64_size);
@@ -249,6 +258,14 @@ int e820_add_entry(uint64_t, uint64_t, uint32_t);
             .driver = TYPE_X86_CPU,\
             .property = "pmu",\
             .value = "on",\
+        },{\
+            .driver   = "i440FX-pcihost",\
+            .property = "short_root_bus",\
+            .value    = stringify(0),\
+        },{\
+            .driver   = "q35-pcihost",\
+            .property = "short_root_bus",\
+            .value    = stringify(0),\
         }
 
 #define PC_COMPAT_1_4 \

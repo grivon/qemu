@@ -1044,9 +1044,11 @@ static int qemu_rdma_resolve_host(RDMAContext *rdma, Error **errp)
         ret = rdma_resolve_addr(rdma->cm_id, NULL, e->ai_dst_addr,
                 RDMA_RESOLVE_TIMEOUT_MS);
         if (!ret) {
-            ret = qemu_rdma_broken_ipv6_kernel(errp, rdma->cm_id->verbs);
-            if (ret) {
-                continue;
+            if (e->ai_family == AF_INET6) {
+                ret = qemu_rdma_broken_ipv6_kernel(errp, rdma->cm_id->verbs);
+                if (ret) {
+                    continue;
+                }
             }
             rdma_freeaddrinfo(res);
             goto route;

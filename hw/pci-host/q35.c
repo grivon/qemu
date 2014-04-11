@@ -61,8 +61,13 @@ static void q35_host_realize(DeviceState *dev, Error **errp)
 static const char *q35_host_root_bus_path(PCIHostState *host_bridge,
                                           PCIBus *rootbus)
 {
-    /* For backwards compat with old device paths */
-    return "0000";
+    Q35PCIHost *s = Q35_HOST_DEVICE(host_bridge);
+
+     /* For backwards compat with old device paths */
+    if (s->mch.short_root_bus) {
+        return "0000";
+    }
+    return "0000:00";
 }
 
 static void q35_host_get_pci_hole_start(Object *obj, Visitor *v,
@@ -108,6 +113,7 @@ static Property mch_props[] = {
                         MCH_HOST_BRIDGE_PCIEXBAR_DEFAULT),
     DEFINE_PROP_SIZE(PCI_HOST_PROP_PCI_HOLE64_SIZE, Q35PCIHost,
                      mch.pci_hole64_size, DEFAULT_PCI_HOLE64_SIZE),
+    DEFINE_PROP_UINT32("short_root_bus", Q35PCIHost, mch.short_root_bus, 1),
     DEFINE_PROP_END_OF_LIST(),
 };
 
@@ -320,6 +326,7 @@ static int mch_init(PCIDevice *d)
 {
     int i;
     MCHPCIState *mch = MCH_PCI_DEVICE(d);
+    uint64_t pci_hole64_size;
 
     /* setup pci memory regions */
     memory_region_init_alias(&mch->pci_hole, OBJECT(mch), "pci-hole",
@@ -329,13 +336,14 @@ static int mch_init(PCIDevice *d)
     memory_region_add_subregion(mch->system_memory, mch->below_4g_mem_size,
                                 &mch->pci_hole);
 
+    pci_hole64_size = pci_host_get_hole64_size(mch->pci_hole64_size);
     pc_init_pci64_hole(&mch->pci_info, 0x100000000ULL + mch->above_4g_mem_size,
-                       mch->pci_hole64_size);
+                       pci_hole64_size);
     memory_region_init_alias(&mch->pci_hole_64bit, OBJECT(mch), "pci-hole64",
                              mch->pci_address_space,
                              mch->pci_info.w64.begin,
-                             mch->pci_hole64_size);
-    if (mch->pci_hole64_size) {
+                             pci_hole64_size);
+    if (pci_hole64_size) {
         memory_region_add_subregion(mch->system_memory,
                                     mch->pci_info.w64.begin,
                                     &mch->pci_hole_64bit);

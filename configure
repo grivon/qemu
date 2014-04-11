@@ -235,6 +235,7 @@ guest_agent=""
 want_tools="yes"
 libiscsi=""
 coroutine=""
+coroutine_pool=""
 seccomp=""
 glusterfs=""
 glusterfs_discard="no"
@@ -296,6 +297,9 @@ query_pkg_config() {
 }
 pkg_config=query_pkg_config
 sdl_config="${SDL_CONFIG-${cross_prefix}sdl-config}"
+
+# If the user hasn't specified ARFLAGS, default to 'rv', just as make does.
+ARFLAGS="${ARFLAGS-rv}"
 
 # default flags for all hosts
 QEMU_CFLAGS="-fno-strict-aliasing $QEMU_CFLAGS"
@@ -871,6 +875,10 @@ for opt do
   ;;
   --with-coroutine=*) coroutine="$optarg"
   ;;
+  --disable-coroutine-pool) coroutine_pool="no"
+  ;;
+  --enable-coroutine-pool) coroutine_pool="yes"
+  ;;
   --disable-docs) docs="no"
   ;;
   --enable-docs) docs="yes"
@@ -1152,6 +1160,8 @@ echo "  --disable-seccomp        disable seccomp support"
 echo "  --enable-seccomp         enables seccomp support"
 echo "  --with-coroutine=BACKEND coroutine backend. Supported options:"
 echo "                           gthread, ucontext, sigaltstack, windows"
+echo "  --disable-coroutine-pool disable coroutine freelist (worse performance)"
+echo "  --enable-coroutine-pool  enable coroutine freelist (better performance)"
 echo "  --enable-glusterfs       enable GlusterFS backend"
 echo "  --disable-glusterfs      disable GlusterFS backend"
 echo "  --enable-gcov            enable test coverage analysis with gcov"
@@ -1387,39 +1397,27 @@ feature_not_found() {
       "configure was not able to find it"
 }
 
-if test -z "$cross_prefix" ; then
-
 # ---
 # big/little endian test
 cat > $TMPC << EOF
-#include <inttypes.h>
-int main(void) {
-        volatile uint32_t i=0x01234567;
-        return (*((uint8_t*)(&i))) == 0x67;
+short big_endian[] = { 0x4269, 0x4765, 0x4e64, 0x4961, 0x4e00, 0, };
+short little_endian[] = { 0x694c, 0x7454, 0x654c, 0x6e45, 0x6944, 0x6e41, 0, };
+extern int foo(short *, short *);
+int main(int argc, char *argv[]) {
+    return foo(big_endian, little_endian);
 }
 EOF
 
-if compile_prog "" "" ; then
-$TMPE && bigendian="yes"
-else
-echo big/little test failed
-fi
-
-else
-
-# if cross compiling, cannot launch a program, so make a static guess
-case "$cpu" in
-  arm)
-    # ARM can be either way; ask the compiler which one we are
-    if check_define __ARMEB__; then
-      bigendian=yes
+if compile_object ; then
+    if grep -q BiGeNdIaN $TMPO ; then
+        bigendian="yes"
+    elif grep -q LiTtLeEnDiAn $TMPO ; then
+        bigendian="no"
+    else
+        echo big/little test failed
     fi
-  ;;
-  hppa|m68k|mips|mips64|ppc|ppc64|s390|s390x|sparc|sparc64)
-    bigendian=yes
-  ;;
-esac
-
+else
+    echo big/little test failed
 fi
 
 ##########################################
@@ -3240,6 +3238,17 @@ else
   esac
 fi
 
+if test "$coroutine_pool" = ""; then
+  if test "$coroutine" = "gthread"; then
+    coroutine_pool=no
+  else
+    coroutine_pool=yes
+  fi
+fi
+if test "$coroutine" = "gthread" -a "$coroutine_pool" = "yes"; then
+  error_exit "'gthread' coroutine backend does not support pool (use --disable-coroutine-pool)"
+fi
+
 ##########################################
 # check if we have open_by_handle_at
 
@@ -3523,6 +3532,7 @@ echo "Source path       $source_path"
 echo "C compiler        $cc"
 echo "Host C compiler   $host_cc"
 echo "Objective-C compiler $objcc"
+echo "ARFLAGS           $ARFLAGS"
 echo "CFLAGS            $CFLAGS"
 echo "QEMU_CFLAGS       $QEMU_CFLAGS"
 echo "LDFLAGS           $LDFLAGS"
@@ -3605,6 +3615,7 @@ echo "libiscsi support  $libiscsi"
 echo "build guest agent $guest_agent"
 echo "seccomp support   $seccomp"
 echo "coroutine backend $coroutine"
+echo "coroutine pool    $coroutine_pool"
 echo "GlusterFS support $glusterfs"
 echo "virtio-blk-data-plane $virtio_blk_data_plane"
 echo "gcov              $gcov_tool"
@@ -3954,6 +3965,11 @@ if test "$rbd" = "yes" ; then
 fi
 
 echo "CONFIG_COROUTINE_BACKEND=$coroutine" >> $config_host_mak
+if test "$coroutine_pool" = "yes" ; then
+  echo "CONFIG_COROUTINE_POOL=1" >> $config_host_mak
+else
+  echo "CONFIG_COROUTINE_POOL=0" >> $config_host_mak
+fi
 
 if test "$open_by_handle_at" = "yes" ; then
   echo "CONFIG_OPEN_BY_HANDLE=y" >> $config_host_mak
@@ -4105,6 +4121,7 @@ echo "CC_I386=$cc_i386" >> $config_host_mak
 echo "HOST_CC=$host_cc" >> $config_host_mak
 echo "OBJCC=$objcc" >> $config_host_mak
 echo "AR=$ar" >> $config_host_mak
+echo "ARFLAGS=$ARFLAGS" >> $config_host_mak
 echo "AS=$as" >> $config_host_mak
 echo "CPP=$cpp" >> $config_host_mak
 echo "OBJCOPY=$objcopy" >> $config_host_mak

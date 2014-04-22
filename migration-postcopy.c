@@ -794,13 +794,21 @@ static int postcopy_outgoing_loop(MigrationState *ms,
     if (s->state == PO_STATE_ACTIVE || s->state == PO_STATE_EOC_RECEIVED) {
         int64_t current_time = qemu_get_clock_ms(rt_clock);
         migration_update_rate_limit_stat(ms, rlstat, current_time);
-        if (qemu_file_rate_limit(ms->file)) {
-            int64_t sleep_ms = migration_sleep_time_ms(rlstat, current_time);
-            timeoutp->tv_sec = sleep_ms / 1000;
-            timeoutp->tv_usec = (sleep_ms % 1000) * 1000;
+        if (migrate_postcopy_outgoing_no_background()) {
+            /* If no_background is set, we does not pass writefd to select(),
+             * so that avoid calling postcopy_outgoing_ram_save_background() in
+             * a busy-loop manner. */
+            timeoutp->tv_sec = 0;
+            timeoutp->tv_usec = 10 * 1000;
         } else {
-            set_fd(writefd, &writefds, &nfds);
-            timeoutp = NULL;
+            if (qemu_file_rate_limit(ms->file)) {
+                int64_t sleep_ms = migration_sleep_time_ms(rlstat, current_time);
+                timeoutp->tv_sec = sleep_ms / 1000;
+                timeoutp->tv_usec = (sleep_ms % 1000) * 1000;
+            } else {
+                set_fd(writefd, &writefds, &nfds);
+                timeoutp = NULL;
+            }
         }
     } else {
         timeoutp = NULL;

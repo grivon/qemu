@@ -413,7 +413,15 @@ void qmp_migrate(const char *uri, bool has_blk, bool blk,
 
     params.blk = has_blk && blk;
     params.shared = has_inc && inc;
-    params.precopy_count = precopy_count,
+    params.precopy_count = 0;
+    if (has_precopy_count) {
+        if (precopy_count < 0) {
+            error_set(errp, QERR_INVALID_PARAMETER_VALUE,
+                      "precopy_count", "precopy_count >= 0");
+            return;
+        }
+        params.precopy_count = precopy_count;
+    }
     params.prefault_forward = 0;
     if (has_forward) {
         if (forward < 0) {

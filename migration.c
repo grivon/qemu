@@ -486,6 +486,16 @@ void qmp_migrate(const char *uri, bool has_blk, bool blk,
 
 void qmp_migrate_cancel(Error **errp)
 {
+    if (migrate_postcopy_outgoing()) {
+        if (migrate_postcopy_outgoing_no_background()) {
+            fprintf(stderr, "cannnot cancel postcopy migration, but enable background copy to finish it.\n");
+            qmp_migrate_postcopy_set_bg(true, NULL);
+        } else {
+            fprintf(stderr, "cannnot cancel postcopy migration. be patient.\n");
+        }
+        return;
+    }
+
     migrate_fd_cancel(migrate_get_current());
 }
 

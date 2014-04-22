@@ -422,7 +422,7 @@ void qmp_migrate(const char *uri, bool has_blk, bool blk,
         }
         params.precopy_count = precopy_count;
     }
-    params.prefault_forward = 0;
+    params.prefault_forward = 8;
     if (has_forward) {
         if (forward < 0) {
             error_set(errp, QERR_INVALID_PARAMETER_VALUE,
@@ -431,7 +431,7 @@ void qmp_migrate(const char *uri, bool has_blk, bool blk,
         }
         params.prefault_forward = forward;
     }
-    params.prefault_backward = 0;
+    params.prefault_backward = 8;
     if (has_backward) {
         if (backward < 0) {
             error_set(errp, QERR_INVALID_PARAMETER_VALUE,

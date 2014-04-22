@@ -2457,6 +2457,12 @@ int qemu_loadvm_state(QEMUFile *f)
                 orig_f = f;
                 f = buf_file;
             }
+            /* libvirt starts the incoming side with -S (autostart = 0), and
+             * sends "cont" after completing source-side's "migrate". For
+             * precopy migration, it works well. But, for postcopy migration,
+             * it makes the VM pause during whole the migration process. */
+            fprintf(stderr, "forcibly enable autostart for postcopy\n");
+            autostart = 1;
             break;
         }
         default:

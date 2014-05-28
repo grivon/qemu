@@ -605,7 +605,17 @@ bool ram_save_block(QEMUFile *f, bool disable_xbzrle, bool last_stage)
             break;
         }
     }
-    ram_save_set_last_seen_block(block, offset);
+
+    if (wrote)
+        ram_save_set_last_seen_block(block, offset);
+    else {
+        /* After we sent all the dirty pages, we have to rewind
+         * last_seen_block to the first block. Otherwise, the next call
+         * of ram_save_block() will start the last block and increment
+         * precopy_count without transferring data. */
+        ram_save_set_last_seen_block(NULL, 0);
+    }
+
 
     return wrote;
 }

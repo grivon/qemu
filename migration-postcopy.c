@@ -349,6 +349,8 @@ int postcopy_outgoing_ram_save_iterate(QEMUFile *f, void *opaque)
 {
     int ret;
     MigrationState *ms = migrate_get_current();
+    DPRINTF("ms->precopy_count: %d, ms->params.precopy_count: %d\n",
+            ms->precopy_count, ms->params.precopy_count);
     if (ms->params.precopy_count == 0 || ms->force_postcopy_phase) {
         qemu_put_be64(f, RAM_SAVE_FLAG_EOS);
         return 1;

@@ -17,6 +17,7 @@
 #include "qemu-common.h"
 #include "qapi-types.h"
 #include "qapi/qmp/qdict.h"
+#include "migration/migration.h"
 
 void hmp_info_name(Monitor *mon, const QDict *qdict);
 void hmp_info_version(Monitor *mon, const QDict *qdict);
@@ -63,6 +64,7 @@ void hmp_migrate_set_capability(Monitor *mon, const QDict *qdict);
 void hmp_migrate_set_cache_size(Monitor *mon, const QDict *qdict);
 void hmp_migrate_force_postcopy_phase(Monitor *mon, const QDict *qdict);
 void hmp_migrate_postcopy_set_bg(Monitor *mon, const QDict *qdict);
+void hmp_migrate_postcopy_set_precopy_count(Monitor *mon, const QDict *qdict);
 void hmp_set_password(Monitor *mon, const QDict *qdict);
 void hmp_expire_password(Monitor *mon, const QDict *qdict);
 void hmp_eject(Monitor *mon, const QDict *qdict);

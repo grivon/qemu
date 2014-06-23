@@ -1007,6 +1007,19 @@ STEXI
 enable/disable postcopy bg transfer
 ETEXI
 
+    {
+        .name       = "migrate_postcopy_set_precopy_count",
+        .args_type  = "value:i",
+        .params     = "value",
+        .help       = "set maxmum number of precopies in hybrid migration",
+        .mhandler.cmd = hmp_migrate_postcopy_set_precopy_count
+    },
+
+STEXI
+@item migrate_postcopy_set_precopy_count
+@findex migrate_postcopy_set_precopy_count
+Set maxmum number of precopies in hybrid migration
+ETEXI
 
     {
         .name       = "client_migrate_info",

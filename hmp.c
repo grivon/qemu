@@ -1039,6 +1039,12 @@ void hmp_migrate_postcopy_set_bg(Monitor *mon, const QDict *qdict)
     hmp_handle_error(mon, &err);
 }
 
+void hmp_migrate_postcopy_set_precopy_count(Monitor *mon, const QDict *qdict)
+{
+    int64_t value = qdict_get_int(qdict, "value");
+    /* TODO: impelement qmp_migrate_postcopy_set_precopy_count() and use it */
+    migrate_postcopy_set_precopy_count(value);
+}
 
 void hmp_set_password(Monitor *mon, const QDict *qdict)
 {

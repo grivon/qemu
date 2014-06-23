@@ -86,6 +86,8 @@ void qemu_start_incoming_migration(const char *uri, Error **errp);
 
 uint64_t migrate_max_downtime(void);
 
+void migrate_postcopy_set_precopy_count(int64_t value);
+
 void do_info_migrate_print(Monitor *mon, const QObject *data);
 
 void do_info_migrate(Monitor *mon, QObject **ret_data);

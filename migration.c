@@ -149,6 +149,13 @@ uint64_t migrate_max_downtime(void)
     return max_downtime;
 }
 
+static int postcopy_mig_precopy_count = 0;
+
+void migrate_postcopy_set_precopy_count(int64_t value)
+{
+    postcopy_mig_precopy_count = MIN(value, INT_MAX);
+}
+
 MigrationCapabilityStatusList *qmp_query_migrate_capabilities(Error **errp)
 {
     MigrationCapabilityStatusList *head = NULL;
@@ -413,7 +420,7 @@ void qmp_migrate(const char *uri, bool has_blk, bool blk,
 
     params.blk = has_blk && blk;
     params.shared = has_inc && inc;
-    params.precopy_count = 0;
+    params.precopy_count = postcopy_mig_precopy_count;
     if (has_precopy_count) {
         if (precopy_count < 0) {
             error_set(errp, QERR_INVALID_PARAMETER_VALUE,

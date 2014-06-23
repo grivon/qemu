@@ -794,7 +794,8 @@ static int postcopy_outgoing_loop(MigrationState *ms,
     if (s->state == PO_STATE_ACTIVE || s->state == PO_STATE_EOC_RECEIVED) {
         int64_t current_time = qemu_get_clock_ms(rt_clock);
         migration_update_rate_limit_stat(ms, rlstat, current_time);
-        if (migrate_postcopy_outgoing_no_background()) {
+        if (migrate_postcopy_outgoing_no_background() &&
+                s->state != PO_STATE_EOC_RECEIVED) {
             /* If no_background is set, we does not pass writefd to select(),
              * so that avoid calling postcopy_outgoing_ram_save_background() in
              * a busy-loop manner. */
